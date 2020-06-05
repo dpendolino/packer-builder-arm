@@ -107,12 +107,6 @@ func (s *StepSetupChroot) Cleanup(state multistep.StateBag) {
 	chrootMounts := sortMountpoints(config.ImageConfig.ImageChrootMounts, true)
 	imageMountpoint := state.Get(s.ImageMountPointKey).(string)
 
-	// kill anything that would prevent the umount to succeed (best effort)
-	// out, err := exec.Command("fuser", "-k", imageMountpoint).CombinedOutput()
-	// if err != nil {
-	// 	ui.Error(fmt.Sprintf("optional `fuser -k` failed with %v: %s", err, out))
-	// }
-
 	// read mtab and umount previously mounted targets
 	mounted, err := getMounts()
 	if err != nil {

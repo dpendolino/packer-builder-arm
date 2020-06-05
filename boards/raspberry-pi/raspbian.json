@@ -1,9 +1,13 @@
 {
-  "variables": {},
+  "variables": {
+    "wifi_name": "",
+    "wifi_password": "",
+    "home": "{{env `HOME`}}"
+  },
   "builders": [{
     "type": "arm",
-    "file_urls" : ["https://downloads.raspberrypi.org/raspbian/images/raspbian-2019-09-30/2019-09-26-raspbian-buster.zip"],
-    "file_checksum_url": "https://downloads.raspberrypi.org/raspbian/images/raspbian-2019-09-30/2019-09-26-raspbian-buster.zip.sha256",
+    "file_urls" : ["https://downloads.raspberrypi.org/raspbian/images/raspbian-2020-02-14/2020-02-13-raspbian-buster.zip"],
+    "file_checksum_url": "https://downloads.raspberrypi.org/raspbian/images/raspbian-2020-02-14/2020-02-13-raspbian-buster.zip.sha256",
     "file_checksum_type": "sha256",
     "file_target_extension": "zip",
     "image_build_method": "reuse",
@@ -34,9 +38,43 @@
   }],
   "provisioners": [
     {
+      "type": "file",
+      "source": "boards/raspberry-pi/rc.local",
+      "destination": "/etc/rc.local"
+    },
+    {
       "type": "shell",
       "inline": [
-        "touch /tmp/test"
+        "chmod +x /etc/rc.local",
+        "touch /boot/ssh",
+        "mkdir -p /home/pi/.ssh",
+        "apt update && apt install -y vim tmux git curl build-essential"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "wpa_passphrase \"{{user `wifi_name`}}\" \"{{user `wifi_password`}}\" | sed -e 's/#.*$//' -e '/^$/d' >> /etc/wpa_supplicant/wpa_supplicant.conf",
+        "echo 'country=US' >> /etc/wpa_supplicant/wpa_supplicant.conf"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "{{user `home`}}/.ssh/id_rsa.pub",
+      "destination": "/home/pi/.ssh/authorized_keys"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo  >> /etc/ssh/sshd_config",
+        "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config"
+      ]
+    },
+
+    {
+      "type": "shell",
+      "inline": [
+        "chown -R pi: /home/pi"
       ]
     }
   ]

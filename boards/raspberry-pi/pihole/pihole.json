@@ -1,0 +1,93 @@
+{
+  "variables": {
+    "wifi_name": "",
+    "wifi_password": "",
+    "home": "{{env `HOME`}}"
+  },
+  "builders": [{
+    "type": "arm",
+    "file_urls" : ["https://downloads.raspberrypi.org/raspbian/images/raspbian-2020-02-14/2020-02-13-raspbian-buster.zip"],
+    "file_checksum_url": "https://downloads.raspberrypi.org/raspbian/images/raspbian-2020-02-14/2020-02-13-raspbian-buster.zip.sha256",
+    "file_checksum_type": "sha256",
+    "file_target_extension": "zip",
+    "image_build_method": "reuse",
+    "image_path": "raspberry-pi.img",
+    "image_size": "2G",
+    "image_type": "dos",
+    "image_partitions": [
+      {
+        "name": "boot",
+        "type": "c",
+        "start_sector": "8192",
+        "filesystem": "vfat",
+        "size": "256M",
+        "mountpoint": "/boot"
+      },
+      {
+        "name": "root",
+        "type": "83",
+        "start_sector": "532480",
+        "filesystem": "ext4",
+        "size": "0",
+        "mountpoint": "/"
+      }
+    ],
+    "image_chroot_env": ["PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"],
+    "qemu_binary_source_path": "/usr/bin/qemu-arm-static",
+    "qemu_binary_destination_path": "/usr/bin/qemu-arm-static"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "mkdir -p /etc/pihole/ "
+      ]
+    },
+    {
+      "type": "file",
+      "source": "boards/raspberry-pi/pihole/setupVars.conf",
+      "destination": "/etc/pihole/setupVars.conf"
+    },
+    {
+      "type": "file",
+      "source": "boards/raspberry-pi/pihole/rc.local",
+      "destination": "/etc/rc.local"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "chmod +x /etc/rc.local",
+        "touch /boot/ssh",
+        "mkdir -p /home/pi/.ssh",
+        "apt update && apt install -y vim tmux git curl build-essential",
+        "curl -sSL https://install.pi-hole.net | bash /dev/stdin --unattended"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "wpa_passphrase \"{{user `wifi_name`}}\" \"{{user `wifi_password`}}\" | sed -e 's/#.*$//' -e '/^$/d' >> /etc/wpa_supplicant/wpa_supplicant.conf",
+        "echo 'country=US' >> /etc/wpa_supplicant/wpa_supplicant.conf"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "{{user `home`}}/.ssh/id_rsa.pub",
+      "destination": "/home/pi/.ssh/authorized_keys"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo  >> /etc/ssh/sshd_config",
+        "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config"
+      ]
+    },
+
+    {
+      "type": "shell",
+      "inline": [
+        "chown -R pi: /home/pi"
+      ]
+    }
+  ]
+}
